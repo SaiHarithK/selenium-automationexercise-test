@@ -4,49 +4,75 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 
 import java.time.Duration;
 
 public class App {
+    public static void main(String[] args) {
 
-    public static void main(String[] args) throws InterruptedException {
 
-        WebDriver driver = new ChromeDriver();
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless=new");
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--window-size=1920,1080");
 
-        driver.manage().window().maximize();
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+        WebDriver driver = new ChromeDriver(options);
 
-        // open website
-        driver.get("https://automationexercise.com/");
 
-        Thread.sleep(3000);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 
-        // try closing popup ad if present
         try {
-            driver.findElement(By.xpath("//svg")).click();
-            System.out.println("Ad popup closed");
+            // Open site
+            driver.get("https://automationexercise.com/");
+
+            // Scroll down
+            ((org.openqa.selenium.JavascriptExecutor) driver)
+                    .executeScript("window.scrollBy(0,500)");
+
+            // Locate first product
+            WebElement product = wait.until(
+                    ExpectedConditions.visibilityOfElementLocated(
+                            By.xpath("(//div[@class='product-image-wrapper'])[1]")
+                    )
+            );
+
+            // Hover over product
+            Actions actions = new Actions(driver);
+            actions.moveToElement(product).perform();
+
+            // Wait for button to be clickable
+            WebElement addToCart = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                            By.xpath("(//a[contains(text(),'Add to cart')])[1]")
+                    )
+            );
+
+            // 🔥 Use JS click (fix for intercepted click)
+            ((org.openqa.selenium.JavascriptExecutor) driver)
+                    .executeScript("arguments[0].click();", addToCart);
+
+            // Wait for popup and click "View Cart"
+            WebElement viewCart = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                            By.xpath("//u[text()='View Cart']")
+                    )
+            );
+            viewCart.click();
+
+            // Small wait to observe result (optional)
+            Thread.sleep(2000);
+
+            System.out.println("✅ Product added to cart successfully!");
+
         } catch (Exception e) {
-            System.out.println("No popup ad");
+            e.printStackTrace();
+        } finally {
+            driver.quit(); // Always close browser
         }
-
-        // locate first product add-to-cart button
-        WebElement product =
-                driver.findElement(By.cssSelector("a[data-product-id='1']"));
-
-        // scroll to product so ad/banner doesn't block it
-        JavascriptExecutor js = (JavascriptExecutor) driver;
-        js.executeScript("arguments[0].scrollIntoView(true);", product);
-
-        Thread.sleep(1000);
-
-        // click add to cart
-        product.click();
-
-        System.out.println("Product added to cart");
-
-        Thread.sleep(4000);
-
-        driver.quit();
     }
 }
